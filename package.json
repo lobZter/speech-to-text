@@ -1,0 +1,15 @@
+{
+  "name": "speech2text",
+  "version": "1.0.0",
+  "description": "",
+  "main": "long_speech.js",
+  "dependencies": {
+    "@google-cloud/speech": "^1.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
