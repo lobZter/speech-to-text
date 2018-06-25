@@ -1,58 +1,76 @@
-// Imports the Google Cloud client library
 const speech = require('@google-cloud/speech');
+const Storage = require('@google-cloud/storage');
 const fs = require('fs');
-
-// Creates a client
 const client = new speech.SpeechClient();
+const storage = new Storage();
 
-
-/**
- * TODO(developer): Uncomment the following lines before running the sample.
- */
-const gcsUri = 'gs://speech-api-20180423/out/' + process.argv[2] + '/' + process.argv[3] + '.flac';
+const bucketName = 'speech-api-20180423';
+const filename = 'ccc.flac';
+const gcsUri = 'gs://' + bucketName + '/' + filename;
 const encoding = 'FLAC';
-const sampleRateHertz = 44100;
+const sampleRateHertz = 48000;
 const languageCode = 'zh-TW';
-
 const config = {
   encoding: encoding,
   sampleRateHertz: sampleRateHertz,
   languageCode: languageCode,
 };
-
 const audio = {
   uri: gcsUri,
 };
-
 const request = {
   config: config,
-  audio: audio,
+  audio: audio
 };
 
-// Detects speech in the audio file. This creates a recognition job that you
-// can wait for now, or get its result later.
-client
-  .longRunningRecognize(request)
-  .then(data => {
-    console.log("Transcripting...")
-    const operation = data[0];
-    // Get a Promise representation of the final result of the job
-    return operation.promise();
-  })
-  .then(data => {
-    console.log("Writing file...")
-    const response = data[0];
-    const transcription = response.results
-      .map(result => result.alternatives[0].transcript)
-      .join('\n');
-    fs.writeFile('output/' + process.argv[2] + '/' + process.argv[3] + '.txt', transcription, function(err) {
-      if(err) {
-        console.log('ERROR:', err);
-        return;
-      }
-      console.log(process.argv[2] + '/' + process.argv[3] + ".txt was saved!");
+function uploadFile(cb) {
+  storage
+    .bucket(bucketName)
+    .upload(filename)
+    .then(() => {
+      console.log(`${filename} uploaded to ${bucketName}.`);
+      cb();
+    })
+    .catch(err => {
+      console.error('ERROR:', err);
     });
-  })
-  .catch(err => {
-    console.error('ERROR:', err);
-  });
+}
+
+function transcription() {
+  client
+    .longRunningRecognize(request)
+    .then(data => {
+      const operation = data[0];
+      // Get a Promise representation of the final result of the job
+      return operation.promise();
+    })
+    .then(data => {
+      const response = data[0];
+      const outfile = filename.split('.')[0] + '.txt';
+      response.results.forEach(result => {
+        console.log(`${result.alternatives[0].transcript}`);
+        fs.appendFileSync(outfile, `${result.alternatives[0].transcript}`, 'utf8');
+        result.alternatives[0].words.forEach(wordInfo => {
+          // NOTE: If you have a time offset exceeding 2^32 seconds, use the
+          // wordInfo.{x}Time.seconds.high to calculate seconds.
+          const startSecs =
+            `${wordInfo.startTime.seconds}` +
+            `.` +
+            wordInfo.startTime.nanos / 100000000;
+          const endSecs =
+            `${wordInfo.endTime.seconds}` +
+            `.` +
+            wordInfo.endTime.nanos / 100000000;
+          console.log(`Word: ${wordInfo.word}`);
+          fs.appendFileSync(outfile, `Word: ${wordInfo.word}`, 'utf8');
+          console.log(`\t ${startSecs} secs - ${endSecs} secs`);
+          fs.appendFileSync(outfile, `\t ${startSecs} secs - ${endSecs} secs`, 'utf8');
+        });
+      });
+    })
+    .catch(err => {
+      console.error('ERROR:', err);
+    });
+}
+
+uploadFile(transcription);

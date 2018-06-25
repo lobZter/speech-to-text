@@ -4,7 +4,8 @@
   "description": "",
   "main": "long_speech.js",
   "dependencies": {
-    "@google-cloud/speech": "^1.5.0"
+    "@google-cloud/speech": "^1.5.0",
+    "@google-cloud/storage": "^1.7.0"
   },
   "devDependencies": {},
   "scripts": {
