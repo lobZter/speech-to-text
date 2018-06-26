@@ -1,6 +1,11 @@
 # IDE
 .vscode
 
+# DATA
+speech
+flac
+txt
+
 # Logs
 logs
 *.log
